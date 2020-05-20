@@ -25,6 +25,7 @@ import (
 	"github.com/IBM-Cloud/bluemix-go/api/cis/cisv1"
 	"github.com/IBM-Cloud/bluemix-go/api/container/containerv1"
 	"github.com/IBM-Cloud/bluemix-go/api/container/containerv2"
+	"github.com/IBM-Cloud/bluemix-go/api/container/registryv1"
 	"github.com/IBM-Cloud/bluemix-go/api/globalsearch/globalsearchv2"
 	"github.com/IBM-Cloud/bluemix-go/api/globaltagging/globaltaggingv3"
 	"github.com/IBM-Cloud/bluemix-go/api/iam/iamv1"
@@ -146,6 +147,7 @@ type ClientSession interface {
 	BluemixAcccountv1API() (accountv1.AccountServiceAPI, error)
 	BluemixUserDetails() (*UserConfig, error)
 	ContainerAPI() (containerv1.ContainerServiceAPI, error)
+	RegistryAPI() (registryv1.RegistryServiceAPI, error)
 	VpcContainerAPI() (containerv2.ContainerServiceAPI, error)
 	CisAPI() (cisv1.CisServiceAPI, error)
 	FunctionClient() (*whisk.Client, error)
@@ -195,6 +197,9 @@ type clientSession struct {
 
 	csv2ConfigErr  error
 	csv2ServiceAPI containerv2.ContainerServiceAPI
+
+	registryConfigErr  error
+	registryServiceAPI registryv1.RegistryServiceAPI
 
 	stxConfigErr  error
 	stxServiceAPI schematics.SchematicsServiceAPI
@@ -295,6 +300,11 @@ func (sess clientSession) BluemixUserDetails() (*UserConfig, error) {
 // ContainerAPI provides Container Service APIs ...
 func (sess clientSession) ContainerAPI() (containerv1.ContainerServiceAPI, error) {
 	return sess.csServiceAPI, sess.csConfigErr
+}
+
+// RegistryServiceAPI provides Container Service APIs ...
+func (sess clientSession) RegistryAPI() (registryv1.RegistryServiceAPI, error) {
+	return sess.registryServiceAPI, sess.registryConfigErr
 }
 
 // VpcContainerAPI provides v2Container Service APIs ...
@@ -540,6 +550,12 @@ func (c *Config) ClientSession() (interface{}, error) {
 		session.csConfigErr = fmt.Errorf("Error occured while configuring Container Service for K8s cluster: %q", err)
 	}
 	session.csServiceAPI = clusterAPI
+
+	regAPI, err := registryv1.New(sess.BluemixSession)
+	if err != nil {
+		session.registryConfigErr = fmt.Errorf("Error occured while configuring Registry Service: %q", err)
+	}
+	session.registryServiceAPI = regAPI
 
 	v2clusterAPI, err := containerv2.New(sess.BluemixSession)
 	if err != nil {
